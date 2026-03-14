@@ -5,6 +5,21 @@ export interface ApplicationsResponse {
   unauthorized: boolean
 }
 
+const NABI_LOCAL_IMAGE = '/images/animals/nabi.jpg'
+const BROKEN_NABI_IMAGE = 'https://images.unsplash.com/photo-1573865526739-10c1dd7e0b3e?w=1200&q=80'
+
+function normalizeAnimalImage(animal: Animal): Animal {
+  if (animal.name !== '나비') {
+    return animal
+  }
+
+  if (!animal.image_url || animal.image_url === BROKEN_NABI_IMAGE) {
+    return { ...animal, image_url: NABI_LOCAL_IMAGE }
+  }
+
+  return animal
+}
+
 async function handleResponse<T>(response: Response): Promise<T | null> {
   if (!response.ok) {
     return null
@@ -17,14 +32,14 @@ async function handleResponse<T>(response: Response): Promise<T | null> {
 export async function getAnimals(): Promise<Animal[]> {
   const response = await fetch('/api/animals', { cache: 'no-store' })
   const data = await handleResponse<Animal[]>(response)
-  return data ?? []
+  return (data ?? []).map(normalizeAnimalImage)
 }
 
 // ID로 특정 동물 조회
 export async function getAnimalById(id: string): Promise<Animal | null> {
   const response = await fetch(`/api/animals/${id}`, { cache: 'no-store' })
   const data = await handleResponse<Animal>(response)
-  return data ?? null
+  return data ? normalizeAnimalImage(data) : null
 }
 
 // 신청 목록 조회 (관리자 전용)

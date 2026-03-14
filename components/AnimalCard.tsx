@@ -15,6 +15,11 @@ export default function AnimalCard({ animal }: Props) {
           src={animal.image_url}
           alt={animal.name}
           className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+          onError={(event) => {
+            const target = event.currentTarget
+            target.onerror = null
+            target.src = 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=1200&q=80'
+          }}
         />
         <div className="absolute top-3 left-3">
           <StatusBadge status={animal.adoption_status} type="adoption" />
