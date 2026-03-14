@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const applicantName = typeof body?.applicant_name === 'string' ? body.applicant_name.trim() : ''
     const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
-    const email = typeof body?.email === 'string' ? body.email.trim() : ''
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
     const reason = typeof body?.reason === 'string' ? body.reason.trim() : ''
     const animalId = typeof body?.animal_id === 'string' ? body.animal_id.trim() : ''
 
@@ -65,6 +65,25 @@ export async function POST(request: Request) {
 
     if (animal.adoption_status !== '입양 가능') {
       return NextResponse.json({ error: '현재 입양 신청을 받을 수 없습니다.' }, { status: 400 })
+    }
+
+    const { data: existingApplication, error: existingError } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('animal_id', animalId)
+      .eq('email', email)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingError) {
+      return NextResponse.json({ error: '기존 신청 내역 확인에 실패했습니다.' }, { status: 500 })
+    }
+
+    if (existingApplication) {
+      return NextResponse.json(
+        { error: '같은 이메일로 이미 해당 동물에 대한 입양 신청이 접수되어 있습니다.' },
+        { status: 409 }
+      )
     }
 
     const newApplication = {

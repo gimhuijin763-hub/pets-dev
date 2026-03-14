@@ -20,6 +20,7 @@ export default function ApplyPage() {
   const [animal, setAnimal] = useState<Animal | null>(null)
   const [form, setForm] = useState<FormData>({ applicant_name: '', phone: '', email: '', reason: '' })
   const [errors, setErrors] = useState<Partial<FormData>>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -59,10 +60,13 @@ export default function ApplyPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
+    setSubmitError(null)
     setLoading(true)
     const result = await addApplication({ animal_id: id, ...form })
-    if (result) {
+    if (result.ok) {
       setSubmitted(true)
+    } else {
+      setSubmitError(result.error ?? '신청서 제출에 실패했습니다. 잠시 후 다시 시도해 주세요.')
     }
     setLoading(false)
   }
@@ -190,6 +194,9 @@ export default function ApplyPage() {
         >
           {loading ? '제출 중...' : '신청서 제출하기'}
         </button>
+        {submitError && (
+          <p className="text-sm text-red-500">{submitError}</p>
+        )}
       </form>
     </div>
   )
