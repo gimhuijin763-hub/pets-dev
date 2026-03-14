@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatSlow {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+:root {
+  --font-pretendard: 'Pretendard Variable', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+  font-family: var(--font-pretendard);
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-brand-500 text-white font-semibold text-sm transition hover:bg-brand-600 active:scale-95 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm transition hover:bg-slate-50 active:scale-95;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition hover:shadow-md;
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition text-sm;
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-slate-600 mb-1.5;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-slate-900 tracking-tight;
+  }
+}
+
+@layer utilities {
+  .fade-in-up {
+    animation: fadeInUp 0.8s ease-out both;
+  }
+
+  .fade-in-up-delayed {
+    animation: fadeInUp 0.8s ease-out both;
+    animation-delay: 0.15s;
+  }
+
+  .float-slow {
+    animation: floatSlow 6s ease-in-out infinite;
+  }
+}
