@@ -5,6 +5,13 @@ export interface ApplicationsResponse {
   unauthorized: boolean
 }
 
+export interface ApiResult<T> {
+  ok: boolean
+  data: T | null
+  error: string | null
+  status: number
+}
+
 const NABI_LOCAL_IMAGE = '/images/animals/nabi.jpg'
 const BROKEN_NABI_IMAGE = 'https://images.unsplash.com/photo-1573865526739-10c1dd7e0b3e?w=1200&q=80'
 
@@ -68,14 +75,19 @@ export async function getApplicationsCountByAnimalId(animalId: string): Promise<
 // 신청 추가
 export async function addApplication(
   applicationData: Omit<Application, 'id' | 'status' | 'created_at'>
-): Promise<Application | null> {
+): Promise<ApiResult<Application>> {
   const response = await fetch('/api/applications', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(applicationData),
   })
-  const data = await handleResponse<Application>(response)
-  return data ?? null
+  const payload = (await response.json().catch(() => null)) as { data?: Application; error?: string } | null
+  return {
+    ok: response.ok,
+    data: payload?.data ?? null,
+    error: payload?.error ?? null,
+    status: response.status,
+  }
 }
 
 // 신청 상태 업데이트 (관리자 전용)
