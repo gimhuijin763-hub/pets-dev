@@ -100,11 +100,11 @@ export default function ApplyPage() {
           담당자가 검토 후 연락드릴 예정입니다.
         </p>
         <div className="flex flex-col gap-3">
-          <Link href="/" className="btn-primary justify-center">
-            다른 동물 보러 가기
+          <Link href="/adopter/applications" className="btn-primary justify-center">
+            내 신청 내역 보기
           </Link>
-          <Link href={`/animals/${id}`} className="btn-secondary justify-center">
-            {animal.name} 페이지로
+          <Link href="/animals" className="btn-secondary justify-center">
+            다른 동물 보러 가기
           </Link>
         </div>
       </div>
@@ -127,6 +127,15 @@ export default function ApplyPage() {
           <p className="text-sm text-slate-500">{animal.type} · {animal.age} · {animal.gender === '남' ? '남아' : '여아'}</p>
         </div>
       </div>
+
+      {!isLoggedIn && (
+        <div className="card p-4 mb-4 bg-amber-50 border border-amber-200 flex items-center justify-between gap-4">
+          <p className="text-sm text-amber-800">로그인하면 신청 내역을 관리할 수 있어요.</p>
+          <Link href={`/login?redirect=/animals/${id}/apply`} className="shrink-0 text-xs font-semibold text-amber-700 underline hover:text-amber-900">
+            로그인하기
+          </Link>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
         <h1 className="text-xl font-extrabold text-slate-900 mb-1">입양 신청서</h1>

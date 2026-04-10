@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Heart, LogOut, Search, ClipboardList } from 'lucide-react'
+import { Heart, LogOut, Search, ClipboardList, UserCog } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { logout } from '@/utils/auth'
 
@@ -60,6 +60,10 @@ export default function AdopterDashboardPage() {
           <Link href="/adopter/applications" className="btn-secondary justify-center gap-2">
             <ClipboardList className="w-4 h-4" />
             내 입양 신청 내역
+          </Link>
+          <Link href="/adopter/profile" className="btn-secondary justify-center gap-2">
+            <UserCog className="w-4 h-4" />
+            내 정보 수정
           </Link>
         </div>
       </div>

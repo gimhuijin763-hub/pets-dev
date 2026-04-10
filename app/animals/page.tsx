@@ -11,6 +11,7 @@ const TYPES = ['전체', '개', '고양이']
 export default function AnimalsPage() {
   const [animals, setAnimals] = useState<Animal[]>([])
   const [filter, setFilter] = useState('전체')
+  const [showAdopted, setShowAdopted] = useState(false)
 
   useEffect(() => {
     async function loadAnimals() {
@@ -20,10 +21,9 @@ export default function AnimalsPage() {
     loadAnimals()
   }, [])
 
-  const filtered =
-    filter === '전체'
-      ? animals
-      : animals.filter((a) => a.type === filter)
+  const filtered = animals
+    .filter((a) => showAdopted || a.adoption_status !== '입양 완료')
+    .filter((a) => filter === '전체' || a.type === filter)
 
   return (
     <div>
@@ -38,7 +38,7 @@ export default function AnimalsPage() {
         </p>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6 items-center">
         {TYPES.map((t) => (
           <button
             key={t}
@@ -52,6 +52,16 @@ export default function AnimalsPage() {
             {t}
           </button>
         ))}
+        <button
+          onClick={() => setShowAdopted((v) => !v)}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
+            showAdopted
+              ? 'bg-slate-700 text-white border-slate-700'
+              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400'
+          }`}
+        >
+          {showAdopted ? '입양 완료 포함' : '입양 완료 제외'}
+        </button>
         <span className="ml-auto text-sm text-slate-400 flex items-center">
           총 {filtered.length}마리
         </span>

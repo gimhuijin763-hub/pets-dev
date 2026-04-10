@@ -85,7 +85,7 @@ export default function LandingPage() {
       {/* ── 가치 포인트 ── */}
       <section>
         <div className="text-center mb-10">
-          <h2 className="text-2xl font-extrabold text-slate-900">왜 Ptes인가요?</h2>
+          <h2 className="text-2xl font-extrabold text-slate-900">왜 Pets인가요?</h2>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
           {[

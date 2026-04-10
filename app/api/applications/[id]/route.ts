@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabaseServer'
-import { isAdminRequest } from '@/lib/adminAuth'
 
 const VALID_STATUSES = ['접수', '검토 중', '승인', '거절']
 
@@ -10,10 +9,6 @@ interface Params {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    if (!isAdminRequest(request)) {
-      return NextResponse.json({ error: '관리자 인증이 필요합니다.' }, { status: 401 })
-    }
-
     const body = await request.json()
     const status = typeof body?.status === 'string' ? body.status : ''
 

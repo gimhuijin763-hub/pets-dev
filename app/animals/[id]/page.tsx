@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { getAnimalById, getApplicationsCountByAnimalId } from '@/utils/supabase-storage'
 import { Animal } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
-import { ArrowLeft, Heart, Calendar, User, Tag } from 'lucide-react'
+import { ArrowLeft, Heart, Calendar, User, Tag, MapPin } from 'lucide-react'
 
 export default function AnimalDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -65,7 +65,7 @@ export default function AnimalDetailPage() {
           <StatusBadge status={animal.adoption_status} type="adoption" />
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className={`grid gap-3 mb-5 ${animal.location ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
           <div className="bg-slate-50 rounded-xl p-3 text-center">
             <Calendar className="w-4 h-4 text-slate-400 mx-auto mb-1" />
             <p className="text-xs text-slate-500">나이</p>
@@ -81,6 +81,13 @@ export default function AnimalDetailPage() {
             <p className="text-xs text-slate-500">종류</p>
             <p className="font-semibold text-slate-800 text-sm">{animal.type}</p>
           </div>
+          {animal.location && (
+            <div className="bg-slate-50 rounded-xl p-3 text-center">
+              <MapPin className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+              <p className="text-xs text-slate-500">위치</p>
+              <p className="font-semibold text-slate-800 text-sm">{animal.location}</p>
+            </div>
+          )}
         </div>
 
         <p className="text-sm text-slate-600 leading-relaxed">{animal.description}</p>

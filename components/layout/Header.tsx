@@ -29,7 +29,7 @@ export default function Header() {
       <div className="max-w-5xl mx-auto px-4 h-full flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 text-brand-500 font-extrabold text-xl tracking-tight hover:opacity-80 transition">
           <PawPrint className="w-6 h-6" />
-          Ptes
+          Pets
         </Link>
 
         <nav className="flex items-center gap-3">

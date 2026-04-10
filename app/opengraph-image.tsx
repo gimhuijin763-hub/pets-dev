@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = 'Ptes 반려동물 입양 신청 관리 서비스'
+export const alt = 'Pets 반려동물 입양 신청 관리 서비스'
 export const size = {
   width: 1200,
   height: 630,
@@ -26,7 +26,7 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', fontSize: 40, fontWeight: 700 }}>
-          Ptes
+          Pets
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -35,7 +35,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 26, opacity: 0.9 }}>
-          <span>Ptes</span>
+          <span>Pets</span>
           <span>https://ptes.vercel.app</span>
         </div>
       </div>

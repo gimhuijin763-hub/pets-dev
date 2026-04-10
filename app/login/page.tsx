@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { PawPrint } from 'lucide-react'
 import { login } from '@/utils/auth'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect')
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState<string | null>(null)
 
@@ -27,7 +29,9 @@ export default function LoginPage() {
       return
     }
 
-    if (result.user.role === 'promoter') {
+    if (redirectTo) {
+      router.push(redirectTo)
+    } else if (result.user.role === 'promoter') {
       router.push('/promoter/dashboard')
     } else if (result.user.role === 'adopter') {
       router.push('/adopter/dashboard')
@@ -69,5 +73,13 @@ export default function LoginPage() {
         <Link href="/signup" className="text-brand-500 font-medium hover:underline">회원가입</Link>
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<p className="text-center py-20 text-sm text-slate-400">로딩 중...</p>}>
+      <LoginForm />
+    </Suspense>
   )
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Megaphone, LogOut, PawPrint, FileText } from 'lucide-react'
+import { Megaphone, LogOut, PawPrint, PlusCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { logout } from '@/utils/auth'
 
@@ -58,12 +58,8 @@ export default function PromoterDashboardPage() {
             등록 동물 관리
           </Link>
           <Link href="/promoter/animals/new" className="btn-secondary justify-center gap-2">
-            <PawPrint className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4" />
             새 동물 등록
-          </Link>
-          <Link href="/promoter/posts" className="btn-secondary justify-center gap-2">
-            <FileText className="w-4 h-4" />
-            홍보 게시물 관리
           </Link>
         </div>
       </div>
