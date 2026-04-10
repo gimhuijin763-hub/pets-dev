@@ -49,6 +49,65 @@ export async function getAnimalById(id: string): Promise<Animal | null> {
   return data ? normalizeAnimalImage(data) : null
 }
 
+// 동물 등록
+export async function createAnimal(
+  animalData: {
+    name: string
+    type: string
+    breed?: string
+    age: string
+    gender: string
+    size?: string
+    location: string
+    description: string
+    adoption_status: string
+  }
+): Promise<ApiResult<Animal>> {
+  const response = await fetch('/api/animals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(animalData),
+  })
+  const payload = (await response.json().catch(() => null)) as { data?: Animal; error?: string } | null
+  return {
+    ok: response.ok,
+    data: payload?.data ?? null,
+    error: payload?.error ?? null,
+    status: response.status,
+  }
+}
+
+// 동물 입양 상태 변경 (관리자 전용)
+export async function updateAnimalStatus(
+  id: string,
+  adoption_status: string
+): Promise<{ ok: boolean; unauthorized: boolean }> {
+  const response = await fetch(`/api/animals/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ adoption_status }),
+  })
+  if (response.status === 401) {
+    return { ok: false, unauthorized: true }
+  }
+  return { ok: response.ok, unauthorized: false }
+}
+
+// 동물 삭제 (관리자 전용)
+export async function deleteAnimal(
+  id: string
+): Promise<{ ok: boolean; unauthorized: boolean }> {
+  const response = await fetch(`/api/animals/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (response.status === 401) {
+    return { ok: false, unauthorized: true }
+  }
+  return { ok: response.ok, unauthorized: false }
+}
+
 // 신청 목록 조회 (관리자 전용)
 export async function getApplications(): Promise<ApplicationsResponse> {
   const response = await fetch('/api/applications', {

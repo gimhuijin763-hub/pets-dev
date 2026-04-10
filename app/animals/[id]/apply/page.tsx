@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getAnimalById, addApplication } from '@/utils/supabase-storage'
+import { getCurrentUser } from '@/utils/auth'
 import { Animal } from '@/types'
 import { ArrowLeft, CheckCircle } from 'lucide-react'
 
@@ -23,6 +24,20 @@ export default function ApplyPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const user = getCurrentUser()
+    if (user) {
+      setIsLoggedIn(true)
+      setForm((prev) => ({
+        ...prev,
+        applicant_name: user.display_name || prev.applicant_name,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone,
+      }))
+    }
+  }, [])
 
   useEffect(() => {
     async function loadAnimal() {
@@ -119,6 +134,12 @@ export default function ApplyPage() {
           아래 정보를 정확히 입력해 주세요. 담당자가 검토 후 연락드립니다.
         </p>
 
+        {isLoggedIn && (
+          <p className="text-xs text-brand-600 bg-brand-50 rounded-lg px-3 py-2">
+            로그인 정보로 자동 입력되었습니다.
+          </p>
+        )}
+
         <div>
           <label htmlFor="applicant_name" className="label">신청자 이름 <span className="text-red-400">*</span></label>
           <input
@@ -127,8 +148,9 @@ export default function ApplyPage() {
             type="text"
             value={form.applicant_name}
             onChange={handleChange}
+            readOnly={isLoggedIn}
             placeholder="홍길동"
-            className={`input ${errors.applicant_name ? 'border-red-300 ring-1 ring-red-300' : ''}`}
+            className={`input ${errors.applicant_name ? 'border-red-300 ring-1 ring-red-300' : ''} ${isLoggedIn ? 'bg-slate-50 text-slate-500 cursor-default' : ''}`}
           />
           {errors.applicant_name && <p className="text-xs text-red-500 mt-1">{errors.applicant_name}</p>}
         </div>
@@ -155,8 +177,9 @@ export default function ApplyPage() {
             type="email"
             value={form.email}
             onChange={handleChange}
+            readOnly={isLoggedIn}
             placeholder="example@email.com"
-            className={`input ${errors.email ? 'border-red-300 ring-1 ring-red-300' : ''}`}
+            className={`input ${errors.email ? 'border-red-300 ring-1 ring-red-300' : ''} ${isLoggedIn ? 'bg-slate-50 text-slate-500 cursor-default' : ''}`}
           />
           {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
         </div>
