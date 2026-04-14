@@ -24,12 +24,14 @@ export interface Animal {
   description: string;
   image_url: string;
   adoption_status: AdoptionStatus;
+  promoter_id?: string;  // 등록한 홍보자 ID
   created_at?: string;
 }
 
 export interface Application {
   id: string;
   animal_id: string;
+  applicant_id?: string;  // 신청자 사용자 ID (로그인한 경우)
   applicant_name: string;
   phone: string;
   email: string;
