@@ -1,6 +1,32 @@
 import { NextResponse } from 'next/server'
 import { getSupabasePublicClient, getSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createClient } from '@supabase/supabase-js'
 import type { AdoptionStatus } from '@/types'
+
+// JWT 토큰으로부터 사용자 ID와 역할을 추출
+async function verifyUserFromToken(request: Request): Promise<{ id: string; role: string } | null> {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) return null
+
+  const token = authHeader.substring(7)
+  if (!token) return null
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data.user) return null
+
+  const metadata = data.user.user_metadata || {}
+  return {
+    id: data.user.id,
+    role: metadata.role || '',
+  }
+}
 
 export async function GET() {
   try {
@@ -25,6 +51,17 @@ const VALID_STATUSES: AdoptionStatus[] = ['입양 가능', '입양 완료', '검
 
 export async function POST(request: Request) {
   try {
+    // 인증 확인
+    const user = await verifyUserFromToken(request)
+    if (!user) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    }
+
+    // promoter 역할만 동물 등록 가능
+    if (user.role !== 'promoter') {
+      return NextResponse.json({ error: '홍보자만 동물을 등록할 수 있습니다.' }, { status: 403 })
+    }
+
     const body = await request.json()
 
     const name = typeof body?.name === 'string' ? body.name.trim() : ''
@@ -65,6 +102,7 @@ export async function POST(request: Request) {
       description,
       image_url: null,
       adoption_status,
+      promoter_id: user.id,  // 등록한 홍보자 ID 저장
       created_at: new Date().toISOString(),
     }
 

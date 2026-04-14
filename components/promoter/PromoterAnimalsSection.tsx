@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { getAnimals } from '@/utils/supabase-storage'
+import { getMyAnimals } from '@/utils/supabase-storage'
 import type { Animal, ApplicationStatus } from '@/types'
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 
@@ -161,8 +161,12 @@ export default function PromoterAnimalsSection() {
   const [showBanner, setShowBanner] = useState(justCreated)
 
   useEffect(() => {
-    getAnimals().then((data) => {
-      setAnimals(data)
+    getMyAnimals().then((result) => {
+      if (result.error) {
+        // 인증 오류 처리
+        console.error('Failed to load animals:', result.error)
+      }
+      setAnimals(result.data)
       setLoading(false)
     })
   }, [])

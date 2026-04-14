@@ -1,5 +1,10 @@
 import type { UserRole } from '@/types'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+const SESSION_KEY = 'auth_session'
+
 export interface AuthUser {
   id: string
   email: string
@@ -9,26 +14,11 @@ export interface AuthUser {
   created_at: string
 }
 
-const USERS_KEY = 'pets_users'
-const SESSION_KEY = 'auth_user'
-
-function getUsers(): AuthUser[] {
-  if (typeof window === 'undefined') return []
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-function saveUsers(users: AuthUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
-export function isEmailTaken(email: string): boolean {
-  if (!email) return false
-  const users = getUsers()
-  return users.some((u) => u.email === email.toLowerCase().trim())
+interface AuthSession {
+  user: AuthUser
+  access_token: string
+  refresh_token: string
+  expires_at?: number
 }
 
 export interface PasswordStrength {
@@ -47,86 +37,140 @@ export function checkPasswordStrength(password: string): PasswordStrength {
   return { minLength, hasLetter, hasNumber, hasSpecial, allPassed: minLength && hasLetter && hasNumber && hasSpecial }
 }
 
-export function signup(params: {
+// 세션 저장
+function saveSession(session: AuthSession) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+}
+
+// 세션 가져오기
+export function getSession(): AuthSession | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(SESSION_KEY)
+    if (!stored) return null
+    const session = JSON.parse(stored) as AuthSession
+
+    // 토큰 만료 체크
+    if (session.expires_at && Date.now() / 1000 > session.expires_at) {
+      localStorage.removeItem(SESSION_KEY)
+      return null
+    }
+
+    return session
+  } catch {
+    return null
+  }
+}
+
+// API 호출 헤더용 토큰 가져오기
+export function getAccessToken(): string | null {
+  return getSession()?.access_token || null
+}
+
+// Supabase Auth 회원가입
+export async function signup(params: {
   email: string
   password: string
   role: UserRole
   display_name: string
   phone?: string
-}): { ok: true; user: AuthUser } | { ok: false; error: string } {
+}): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
   const { email, password, role, display_name, phone } = params
 
   if (!email || !password || !role || !display_name) {
     return { ok: false, error: '필수 항목을 모두 입력해 주세요.' }
   }
+
   const strength = checkPasswordStrength(password)
   if (!strength.allPassed) {
     return { ok: false, error: '비밀번호는 8자 이상, 영문·숫자·특수문자를 모두 포함해야 합니다.' }
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(email)) {
-    return { ok: false, error: '올바른 이메일 형식을 입력해 주세요.' }
+
+  try {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role, display_name, phone }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return { ok: false, error: data.error || '회원가입에 실패했습니다.' }
+    }
+
+    const user: AuthUser = {
+      id: data.data.id,
+      email: data.data.email,
+      role: data.data.role,
+      display_name: display_name,
+      phone: phone || undefined,
+      created_at: new Date().toISOString(),
+    }
+
+    // 세션이 있는 경우 저장
+    if (data.data.access_token) {
+      saveSession({
+        user,
+        access_token: data.data.access_token,
+        refresh_token: data.data.refresh_token,
+      })
+    }
+
+    return { ok: true, user }
+  } catch {
+    return { ok: false, error: '회원가입 중 오류가 발생했습니다.' }
   }
-
-  const users = getUsers()
-  if (users.some((u) => u.email === email.toLowerCase())) {
-    return { ok: false, error: '이미 가입된 이메일입니다.' }
-  }
-
-  const newUser: AuthUser = {
-    id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    email: email.toLowerCase(),
-    role,
-    display_name,
-    phone: phone || undefined,
-    created_at: new Date().toISOString(),
-  }
-
-  // 비밀번호는 별도 저장 (간단 해시)
-  const pwKey = `pets_pw_${newUser.id}`
-  localStorage.setItem(pwKey, btoa(password))
-
-  users.push(newUser)
-  saveUsers(users)
-
-  // 자동 로그인
-  localStorage.setItem(SESSION_KEY, JSON.stringify(newUser))
-
-  return { ok: true, user: newUser }
 }
 
-export function login(email: string, password: string): { ok: true; user: AuthUser } | { ok: false; error: string } {
+// Supabase Auth 로그인
+export async function login(email: string, password: string): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
   if (!email || !password) {
     return { ok: false, error: '이메일과 비밀번호를 입력해 주세요.' }
   }
 
-  const users = getUsers()
-  const user = users.find((u) => u.email === email.toLowerCase())
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
 
-  if (!user) {
-    return { ok: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' }
+    const data = await response.json()
+
+    if (!response.ok) {
+      return { ok: false, error: data.error || '로그인에 실패했습니다.' }
+    }
+
+    const user: AuthUser = {
+      id: data.data.id,
+      email: data.data.email,
+      role: data.data.role,
+      display_name: data.data.display_name,
+      phone: data.data.phone,
+      created_at: new Date().toISOString(),
+    }
+
+    saveSession({
+      user,
+      access_token: data.data.access_token,
+      refresh_token: data.data.refresh_token,
+    })
+
+    return { ok: true, user }
+  } catch {
+    return { ok: false, error: '로그인 중 오류가 발생했습니다.' }
   }
-
-  const pwKey = `pets_pw_${user.id}`
-  const stored = localStorage.getItem(pwKey)
-  if (!stored || atob(stored) !== password) {
-    return { ok: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' }
-  }
-
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user))
-  return { ok: true, user }
 }
 
+// 로그아웃
 export function logout() {
+  if (typeof window === 'undefined') return
   localStorage.removeItem(SESSION_KEY)
 }
 
+// 현재 사용자 가져오기
 export function getCurrentUser(): AuthUser | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const stored = localStorage.getItem(SESSION_KEY)
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
+  return getSession()?.user || null
 }

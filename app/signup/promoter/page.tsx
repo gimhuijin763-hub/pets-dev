@@ -12,6 +12,7 @@ export default function SignupPromoterPage() {
   const router = useRouter()
   const [form, setForm] = useState({ email: '', password: '', passwordConfirm: '', display_name: '', phone: '' })
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const pwStrength = useMemo(() => checkPasswordStrength(form.password), [form.password])
 
@@ -20,7 +21,7 @@ export default function SignupPromoterPage() {
     if (error) setError(null)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
@@ -29,13 +30,17 @@ export default function SignupPromoterPage() {
       return
     }
 
-    const result = signup({
+    setLoading(true)
+
+    const result = await signup({
       email: form.email,
       password: form.password,
       role: 'promoter',
       display_name: form.display_name,
       phone: form.phone,
     })
+
+    setLoading(false)
 
     if (!result.ok) {
       setError(result.error)
@@ -100,8 +105,8 @@ export default function SignupPromoterPage() {
           <input name="phone" value={form.phone} onChange={handleChange} className="input" placeholder="010-0000-0000" />
         </div>
 
-        <button type="submit" className="btn-primary w-full justify-center">
-          가입하기
+        <button type="submit" disabled={loading} className="btn-primary w-full justify-center disabled:opacity-60">
+          {loading ? '가입 중...' : '가입하기'}
         </button>
       </form>
 

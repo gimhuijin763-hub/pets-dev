@@ -27,7 +27,7 @@ async function verifyUserFromToken(request: Request): Promise<{ id: string; role
   }
 }
 
-// 현재 로그인한 사용자의 신청 내역 조회 (applicant_id 기반)
+// 현재 로그인한 홍보자의 동물 목록 조회
 export async function GET(request: NextRequest) {
   try {
     const user = await verifyUserFromToken(request)
@@ -35,17 +35,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
     }
 
+    if (user.role !== 'promoter' && user.role !== 'admin') {
+      return NextResponse.json({ error: '홍보자만 접근할 수 있습니다.' }, { status: 403 })
+    }
+
     const supabase = getSupabaseAdminClient()
 
-    // applicant_id가 현재 사용자 ID인 신청만 조회
-    const { data, error } = await supabase
-      .from('applications')
-      .select('*, animals(id, name, type, breed, image_url, adoption_status)')
-      .eq('applicant_id', user.id)
-      .order('created_at', { ascending: false })
+    // 관리자는 모든 동물 조회 가능, 홍보자는 자신의 동물만
+    let query = supabase.from('animals').select('*').order('created_at', { ascending: false })
+
+    if (user.role === 'promoter') {
+      query = query.eq('promoter_id', user.id)
+    }
+
+    const { data, error } = await query
 
     if (error) {
-      return NextResponse.json({ error: '신청 내역 조회에 실패했습니다.' }, { status: 500 })
+      return NextResponse.json({ error: '동물 목록 조회에 실패했습니다.' }, { status: 500 })
     }
 
     return NextResponse.json({ data: data ?? [] })

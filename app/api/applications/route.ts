@@ -1,9 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabaseServer'
 import { isAdminRequest } from '@/lib/adminAuth'
+import { createClient } from '@supabase/supabase-js'
 
 const PHONE_REGEX = /^[0-9\-+\s]{9,13}$/
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// JWT 토큰으로부터 사용자 ID를 추출 (선택적 인증)
+async function getUserFromToken(request: Request): Promise<{ id: string; role: string } | null> {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) return null
+
+  const token = authHeader.substring(7)
+  if (!token) return null
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data.user) return null
+
+  const metadata = data.user.user_metadata || {}
+  return {
+    id: data.user.id,
+    role: metadata.role || '',
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +55,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
+    // 로그인한 사용자 정보 확인 (선택적)
+    const user = await getUserFromToken(request)
+
     const body = await request.json()
     const applicantName = typeof body?.applicant_name === 'string' ? body.applicant_name.trim() : ''
     const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
@@ -67,26 +96,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '현재 입양 신청을 받을 수 없습니다.' }, { status: 400 })
     }
 
-    const { data: existingApplication, error: existingError } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('animal_id', animalId)
-      .eq('email', email)
-      .limit(1)
-      .maybeSingle()
+    // 로그인한 사용자는 applicant_id로 중복 체크, 비로그인은 email로 체크
+    const duplicateCheck = user
+      ? await supabase.from('applications').select('id').eq('animal_id', animalId).eq('applicant_id', user.id).limit(1).maybeSingle()
+      : await supabase.from('applications').select('id').eq('animal_id', animalId).eq('email', email).limit(1).maybeSingle()
 
-    if (existingError) {
+    if (duplicateCheck.error) {
       return NextResponse.json({ error: '기존 신청 내역 확인에 실패했습니다.' }, { status: 500 })
     }
 
-    if (existingApplication) {
+    if (duplicateCheck.data) {
       return NextResponse.json(
-        { error: '같은 이메일로 이미 해당 동물에 대한 입양 신청이 접수되어 있습니다.' },
+        { error: '이미 해당 동물에 대한 입양 신청이 접수되어 있습니다.' },
         { status: 409 }
       )
     }
 
-    const newApplication = {
+    const newApplication: Record<string, unknown> = {
       id: `app_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       animal_id: animalId,
       applicant_name: applicantName,
@@ -95,6 +121,11 @@ export async function POST(request: Request) {
       reason,
       status: '접수',
       created_at: new Date().toISOString(),
+    }
+
+    // 로그인한 사용자인 경우 applicant_id 저장
+    if (user) {
+      newApplication.applicant_id = user.id
     }
 
     const { data, error } = await supabase

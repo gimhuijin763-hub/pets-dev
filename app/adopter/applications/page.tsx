@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { getMyApplications } from '@/utils/supabase-storage'
 import { ClipboardList, ArrowLeft, PawPrint } from 'lucide-react'
 
 interface ApplicationWithAnimal {
@@ -35,12 +36,11 @@ export default function AdopterApplicationsPage() {
     async function load() {
       setFetching(true)
       try {
-        const res = await fetch(`/api/applications/my?email=${encodeURIComponent(user!.email)}`)
-        const payload = await res.json()
-        if (!res.ok) {
-          setError(payload.error ?? '신청 내역을 불러오지 못했습니다.')
+        const result = await getMyApplications()
+        if (result.error) {
+          setError(result.error)
         } else {
-          setApplications(payload.data ?? [])
+          setApplications(result.data as ApplicationWithAnimal[])
         }
       } catch {
         setError('네트워크 오류가 발생했습니다.')

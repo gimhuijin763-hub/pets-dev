@@ -12,17 +12,21 @@ function LoginForm() {
   const redirectTo = searchParams.get('redirect')
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
     if (error) setError(null)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setLoading(true)
 
-    const result = login(form.email, form.password)
+    const result = await login(form.email, form.password)
+
+    setLoading(false)
 
     if (!result.ok) {
       setError(result.error)
@@ -63,8 +67,8 @@ function LoginForm() {
           <input name="password" type="password" value={form.password} onChange={handleChange} className="input" placeholder="••••••" />
         </div>
 
-        <button type="submit" className="btn-primary w-full justify-center">
-          로그인
+        <button type="submit" disabled={loading} className="btn-primary w-full justify-center disabled:opacity-60">
+          {loading ? '로그인 중...' : '로그인'}
         </button>
       </form>
 

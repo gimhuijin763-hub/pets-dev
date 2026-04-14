@@ -12,6 +12,22 @@ export interface ApiResult<T> {
   status: number
 }
 
+// localStorage에서 액세스 토큰 가져오기
+function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    // auth_session 키에서 Supabase 세션을 찾음
+    const sessionData = localStorage.getItem('auth_session')
+    if (sessionData) {
+      const session = JSON.parse(sessionData)
+      return session.access_token || null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 const NABI_LOCAL_IMAGE = '/images/animals/nabi.jpg'
 const BROKEN_NABI_IMAGE = 'https://images.unsplash.com/photo-1573865526739-10c1dd7e0b3e?w=1200&q=80'
 
@@ -63,9 +79,15 @@ export async function createAnimal(
     adoption_status: string
   }
 ): Promise<ApiResult<Animal>> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch('/api/animals', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(animalData),
   })
   const payload = (await response.json().catch(() => null)) as { data?: Animal; error?: string } | null
@@ -77,35 +99,75 @@ export async function createAnimal(
   }
 }
 
-// 동물 입양 상태 변경 (관리자 전용)
+// 동물 입양 상태 변경
 export async function updateAnimalStatus(
   id: string,
   adoption_status: string
-): Promise<{ ok: boolean; unauthorized: boolean }> {
+): Promise<{ ok: boolean; unauthorized: boolean; error?: string }> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(`/api/animals/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    headers,
     body: JSON.stringify({ adoption_status }),
   })
   if (response.status === 401) {
     return { ok: false, unauthorized: true }
   }
-  return { ok: response.ok, unauthorized: false }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string }
+    return { ok: false, unauthorized: false, error: payload.error || '수정에 실패했습니다.' }
+  }
+  return { ok: true, unauthorized: false }
 }
 
-// 동물 삭제 (관리자 전용)
+// 동물 삭제
 export async function deleteAnimal(
   id: string
-): Promise<{ ok: boolean; unauthorized: boolean }> {
+): Promise<{ ok: boolean; unauthorized: boolean; error?: string }> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(`/api/animals/${id}`, {
     method: 'DELETE',
-    credentials: 'include',
+    headers,
   })
   if (response.status === 401) {
     return { ok: false, unauthorized: true }
   }
-  return { ok: response.ok, unauthorized: false }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string }
+    return { ok: false, unauthorized: false, error: payload.error || '삭제에 실패했습니다.' }
+  }
+  return { ok: true, unauthorized: false }
+}
+
+// 내 동물 목록 조회 (홍보자용)
+export async function getMyAnimals(): Promise<{ data: Animal[]; error: string | null }> {
+  const token = getAccessToken()
+  if (!token) {
+    return { data: [], error: '로그인이 필요합니다.' }
+  }
+
+  const response = await fetch('/api/animals/my', {
+    cache: 'no-store',
+    headers: { 'Authorization': `Bearer ${token}` },
+  })
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string }
+    return { data: [], error: payload.error || '목록 조회에 실패했습니다.' }
+  }
+
+  const data = await handleResponse<Animal[]>(response)
+  return { data: (data ?? []).map(normalizeAnimalImage), error: null }
 }
 
 // 신청 목록 조회 (관리자 전용)
@@ -135,9 +197,15 @@ export async function getApplicationsCountByAnimalId(animalId: string): Promise<
 export async function addApplication(
   applicationData: Omit<Application, 'id' | 'status' | 'created_at'>
 ): Promise<ApiResult<Application>> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch('/api/applications', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(applicationData),
   })
   const payload = (await response.json().catch(() => null)) as { data?: Application; error?: string } | null
@@ -149,19 +217,49 @@ export async function addApplication(
   }
 }
 
-// 신청 상태 업데이트 (관리자 전용)
+// 신청 상태 업데이트
 export async function updateApplicationStatus(
   id: string,
   status: ApplicationStatus
-): Promise<{ ok: boolean; unauthorized: boolean }> {
+): Promise<{ ok: boolean; unauthorized: boolean; error?: string }> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(`/api/applications/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    headers,
     body: JSON.stringify({ status }),
   })
   if (response.status === 401) {
     return { ok: false, unauthorized: true }
   }
-  return { ok: response.ok, unauthorized: false }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string }
+    return { ok: false, unauthorized: false, error: payload.error || '상태 변경에 실패했습니다.' }
+  }
+  return { ok: true, unauthorized: false }
+}
+
+// 내 신청 내역 조회 (입양 희망자용)
+export async function getMyApplications(): Promise<{ data: Application[]; error: string | null }> {
+  const token = getAccessToken()
+  if (!token) {
+    return { data: [], error: '로그인이 필요합니다.' }
+  }
+
+  const response = await fetch('/api/applications/my', {
+    cache: 'no-store',
+    headers: { 'Authorization': `Bearer ${token}` },
+  })
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string }
+    return { data: [], error: payload.error || '신청 내역 조회에 실패했습니다.' }
+  }
+
+  const data = await handleResponse<Application[]>(response)
+  return { data: data ?? [], error: null }
 }
