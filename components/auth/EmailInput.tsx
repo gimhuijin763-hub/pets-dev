@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { isEmailTaken } from '@/utils/auth'
 
 interface Props {
   value: string
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  isTaken?: boolean // Optional prop for parent to indicate if email is taken
 }
 
-export default function EmailInput({ value, onChange }: Props) {
+export default function EmailInput({ value, onChange, isTaken }: Props) {
   const [status, setStatus] = useState<'idle' | 'valid' | 'taken' | 'invalid'>('idle')
 
   useEffect(() => {
@@ -23,12 +23,13 @@ export default function EmailInput({ value, onChange }: Props) {
       return
     }
 
-    const timer = setTimeout(() => {
-      setStatus(isEmailTaken(value) ? 'taken' : 'valid')
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [value])
+    // Parent can pass isTaken to show taken status
+    if (isTaken !== undefined) {
+      setStatus(isTaken ? 'taken' : 'valid')
+    } else {
+      setStatus('valid')
+    }
+  }, [value, isTaken])
 
   return (
     <div>

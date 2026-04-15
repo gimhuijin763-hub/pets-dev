@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { getMyAnimals } from '@/utils/supabase-storage'
+import { getMyAnimals, getAccessToken } from '@/utils/supabase-storage'
 import type { Animal, ApplicationStatus } from '@/types'
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 
@@ -29,14 +29,23 @@ function AnimalRow({ animal }: { animal: Animal }) {
   const [applications, setApplications] = useState<Application[]>([])
   const [fetching, setFetching] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function loadApplications() {
     if (applications.length > 0) return
     setFetching(true)
+    setError(null)
     try {
-      const res = await fetch(`/api/animals/${animal.id}/applications`)
+      const token = await getAccessToken()
+      const res = await fetch(`/api/animals/${animal.id}/applications`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      })
       const payload = await res.json()
-      setApplications(payload.data ?? [])
+      if (!res.ok) {
+        setError(payload.error || '신청 목록을 불러오는데 실패했습니다.')
+      } else {
+        setApplications(payload.data ?? [])
+      }
     } finally {
       setFetching(false)
     }
@@ -49,13 +58,21 @@ function AnimalRow({ animal }: { animal: Animal }) {
 
   async function updateStatus(appId: string, status: ApplicationStatus) {
     setUpdatingId(appId)
+    setError(null)
     try {
+      const token = await getAccessToken()
       const res = await fetch(`/api/applications/${appId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status }),
       })
-      if (res.ok) {
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        setError(payload.error || '상태 변경에 실패했습니다.')
+      } else {
         setApplications((prev) =>
           prev.map((a) => (a.id === appId ? { ...a, status } : a))
         )

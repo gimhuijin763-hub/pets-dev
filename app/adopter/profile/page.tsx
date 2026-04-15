@@ -1,56 +1,64 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { getSupabaseBrowserClient } from '@/lib/supabaseClient'
 import { ArrowLeft, CheckCircle, User } from 'lucide-react'
 
 export default function AdopterProfilePage() {
   const { user, loading } = useAuth({ requiredRole: 'adopter' })
   const [displayName, setDisplayName] = useState('')
   const [phone, setPhone] = useState('')
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [initialized, setInitialized] = useState(false)
 
-  if (!loading && user && !initialized) {
-    setDisplayName(user.display_name)
-    setPhone(user.phone || '')
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.display_name || '')
+      setPhone(user.phone || '')
+    }
+  }, [user])
 
   if (loading || !user) {
     return <p className="text-center py-20 text-sm text-slate-400">로딩 중...</p>
   }
 
-  function handleSave() {
+  async function handleSave() {
     setError(null)
+    setSaving(true)
+
     if (!displayName.trim()) {
       setError('이름을 입력해 주세요.')
+      setSaving(false)
       return
     }
     if (phone && !/^[0-9\-+\s]{9,13}$/.test(phone.trim())) {
       setError('올바른 연락처를 입력해 주세요.')
+      setSaving(false)
       return
     }
+
     try {
-      const USERS_KEY = 'pets_users'
-      const SESSION_KEY = 'auth_user'
-      const raw = localStorage.getItem(USERS_KEY)
-      const users = raw ? JSON.parse(raw) : []
-      const currentUser = user!
-      const updated = users.map((u: { id: string }) =>
-        u.id === currentUser.id
-          ? { ...u, display_name: displayName.trim(), phone: phone.trim() || undefined }
-          : u
-      )
-      localStorage.setItem(USERS_KEY, JSON.stringify(updated))
-      const newUser = { ...currentUser, display_name: displayName.trim(), phone: phone.trim() || undefined }
-      localStorage.setItem(SESSION_KEY, JSON.stringify(newUser))
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      const supabase = getSupabaseBrowserClient()
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          display_name: displayName.trim(),
+          phone: phone.trim() || null,
+        },
+      })
+
+      if (updateError) {
+        setError(updateError.message)
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
     } catch {
       setError('저장 중 오류가 발생했습니다.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -117,8 +125,12 @@ export default function AdopterProfilePage() {
           </div>
         )}
 
-        <button onClick={handleSave} className="btn-primary w-full justify-center">
-          저장하기
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-primary w-full justify-center disabled:opacity-60"
+        >
+          {saving ? '저장 중...' : '저장하기'}
         </button>
       </div>
     </div>

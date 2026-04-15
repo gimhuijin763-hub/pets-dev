@@ -28,13 +28,38 @@ async function verifyUserFromToken(request: Request): Promise<{ id: string; role
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+
+    // Parse filter parameters
+    const location = searchParams.get('location')
+    const type = searchParams.get('type')
+    const size = searchParams.get('size')
+    const gender = searchParams.get('gender')
+    const adoption_status = searchParams.get('adoption_status')
+
     const supabase = getSupabasePublicClient()
-    const { data, error } = await supabase
-      .from('animals')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabase.from('animals').select('*')
+
+    // Apply filters if provided
+    if (location) {
+      query = query.ilike('location', `%${location}%`)
+    }
+    if (type) {
+      query = query.eq('type', type)
+    }
+    if (size) {
+      query = query.eq('size', size)
+    }
+    if (gender) {
+      query = query.eq('gender', gender)
+    }
+    if (adoption_status) {
+      query = query.eq('adoption_status', adoption_status)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: '동물 목록 조회에 실패했습니다.' }, { status: 500 })

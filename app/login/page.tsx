@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { PawPrint } from 'lucide-react'
-import { login } from '@/utils/auth'
+import { signInWithPassword } from '@/lib/supabaseClient'
 
 function LoginForm() {
   const router = useRouter()
@@ -24,7 +24,7 @@ function LoginForm() {
     setError(null)
     setLoading(true)
 
-    const result = await login(form.email, form.password)
+    const result = await signInWithPassword(form.email, form.password)
 
     setLoading(false)
 

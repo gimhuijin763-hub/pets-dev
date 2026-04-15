@@ -1,26 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { PawPrint, LogOut } from 'lucide-react'
-import { getCurrentUser, logout as authLogout, type AuthUser } from '@/utils/auth'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { signOut } from '@/lib/supabaseClient'
 
 export default function Header() {
   const pathname = usePathname()
   const router = useRouter()
+  const { user, loading } = useAuthContext()
   const isAdmin = pathname?.startsWith('/admin')
   const isAnimals = pathname === '/animals' || pathname?.startsWith('/animals/')
 
-  const [user, setUser] = useState<AuthUser | null>(null)
-
-  useEffect(() => {
-    setUser(getCurrentUser())
-  }, [pathname])
-
-  function handleLogout() {
-    authLogout()
-    setUser(null)
+  async function handleLogout() {
+    await signOut()
     router.push('/')
   }
 
@@ -50,22 +44,26 @@ export default function Header() {
             관리자
           </Link>
 
-          {user ? (
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
-              <span className="text-xs text-slate-500">{user.display_name}</span>
-              <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition" title="로그아웃">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
-              <Link href="/login" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition">
-                로그인
-              </Link>
-              <Link href="/signup" className="text-sm font-medium text-white bg-brand-500 px-3 py-1.5 rounded-lg hover:bg-brand-600 transition">
-                가입
-              </Link>
-            </div>
+          {!loading && (
+            <>
+              {user ? (
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
+                  <span className="text-xs text-slate-500">{user.display_name}</span>
+                  <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition" title="로그아웃">
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
+                  <Link href="/login" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition">
+                    로그인
+                  </Link>
+                  <Link href="/signup" className="text-sm font-medium text-white bg-brand-500 px-3 py-1.5 rounded-lg hover:bg-brand-600 transition">
+                    가입
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </nav>
       </div>

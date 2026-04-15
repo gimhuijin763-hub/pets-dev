@@ -4,14 +4,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Megaphone, LogOut, PawPrint, PlusCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { logout } from '@/utils/auth'
 
 export default function PromoterDashboardPage() {
-  const { user, loading } = useAuth({ requiredRole: 'promoter' })
+  const { user, loading, signOut } = useAuth({ requiredRole: 'promoter' })
   const router = useRouter()
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await signOut()
     router.push('/')
   }
 

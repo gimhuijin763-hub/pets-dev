@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getAnimalById, addApplication } from '@/utils/supabase-storage'
-import { getCurrentUser } from '@/utils/auth'
+import { getCurrentUser } from '@/lib/supabaseClient'
 import { Animal } from '@/types'
-import { ArrowLeft, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, PawPrint } from 'lucide-react'
 
 interface FormData {
   applicant_name: string
@@ -25,18 +25,21 @@ export default function ApplyPage() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
-    const user = getCurrentUser()
-    if (user) {
-      setIsLoggedIn(true)
-      setForm((prev) => ({
-        ...prev,
-        applicant_name: user.display_name || prev.applicant_name,
-        email: user.email || prev.email,
-        phone: user.phone || prev.phone,
-      }))
-    }
+    getCurrentUser().then((user) => {
+      if (user) {
+        setIsLoggedIn(true)
+        setForm((prev) => ({
+          ...prev,
+          applicant_name: user.display_name || prev.applicant_name,
+          email: user.email || prev.email,
+          phone: user.phone || prev.phone,
+        }))
+      }
+      setCheckingAuth(false)
+    })
   }, [])
 
   useEffect(() => {
@@ -81,12 +84,63 @@ export default function ApplyPage() {
     if (result.ok) {
       setSubmitted(true)
     } else {
+      // 401 오류면 로그인 페이지로 리다이렉트
+      if (result.status === 401) {
+        router.push(`/login?redirect=/animals/${id}/apply`)
+        return
+      }
       setSubmitError(result.error ?? '신청서 제출에 실패했습니다. 잠시 후 다시 시도해 주세요.')
     }
     setLoading(false)
   }
 
   if (!animal) return null
+
+  // 로그인하지 않은 경우 로그인 유도 화면 표시
+  if (!checkingAuth && !isLoggedIn) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <Link href={`/animals/${id}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-5 transition">
+          <ArrowLeft className="w-4 h-4" />
+          {animal.name} 상세로 돌아가기
+        </Link>
+
+        <div className="card flex items-center gap-4 p-4 mb-6">
+          <img src={animal.image_url} alt={animal.name} className="w-16 h-16 rounded-xl object-cover shrink-0" />
+          <div>
+            <p className="text-xs text-slate-400 font-medium mb-0.5">입양 신청 대상</p>
+            <p className="font-bold text-slate-900 text-lg">{animal.name}</p>
+            <p className="text-sm text-slate-500">{animal.type} · {animal.age} · {animal.gender === '남' ? '남아' : '여아'}</p>
+          </div>
+        </div>
+
+        <div className="card p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center mx-auto mb-4">
+            <PawPrint className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">로그인이 필요합니다</h2>
+          <p className="text-slate-500 text-sm mb-6">
+            입양 신청을 하시려면 먼저 로그인해 주세요.<br />
+            가입하지 않으셨다면 회원가입 후 신청할 수 있습니다.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href={`/login?redirect=/animals/${id}/apply`}
+              className="btn-primary justify-center"
+            >
+              로그인하기
+            </Link>
+            <Link
+              href={`/signup?redirect=/animals/${id}/apply`}
+              className="btn-secondary justify-center"
+            >
+              회원가입하기
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (submitted) {
     return (

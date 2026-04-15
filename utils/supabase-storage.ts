@@ -1,4 +1,8 @@
 import { Animal, Application, ApplicationStatus } from '@/types';
+import { getAccessToken as getTokenFromClient } from '@/lib/supabaseClient';
+
+// Re-export for components that need token access
+export const getAccessToken = getTokenFromClient;
 
 export interface ApplicationsResponse {
   data: Application[]
@@ -10,22 +14,6 @@ export interface ApiResult<T> {
   data: T | null
   error: string | null
   status: number
-}
-
-// localStorage에서 액세스 토큰 가져오기
-function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    // auth_session 키에서 Supabase 세션을 찾음
-    const sessionData = localStorage.getItem('auth_session')
-    if (sessionData) {
-      const session = JSON.parse(sessionData)
-      return session.access_token || null
-    }
-    return null
-  } catch {
-    return null
-  }
 }
 
 const NABI_LOCAL_IMAGE = '/images/animals/nabi.jpg'
@@ -51,9 +39,27 @@ async function handleResponse<T>(response: Response): Promise<T | null> {
   return payload.data ?? null
 }
 
-// 동물 목록 조회
-export async function getAnimals(): Promise<Animal[]> {
-  const response = await fetch('/api/animals', { cache: 'no-store' })
+// 동물 목록 조회 (필터 지원)
+export interface AnimalFilters {
+  location?: string
+  type?: string
+  size?: string
+  gender?: string
+  adoption_status?: string
+}
+
+export async function getAnimals(filters?: AnimalFilters): Promise<Animal[]> {
+  const params = new URLSearchParams()
+  if (filters?.location) params.set('location', filters.location)
+  if (filters?.type) params.set('type', filters.type)
+  if (filters?.size) params.set('size', filters.size)
+  if (filters?.gender) params.set('gender', filters.gender)
+  if (filters?.adoption_status) params.set('adoption_status', filters.adoption_status)
+
+  const queryString = params.toString()
+  const url = queryString ? `/api/animals?${queryString}` : '/api/animals'
+
+  const response = await fetch(url, { cache: 'no-store' })
   const data = await handleResponse<Animal[]>(response)
   return (data ?? []).map(normalizeAnimalImage)
 }
@@ -79,7 +85,7 @@ export async function createAnimal(
     adoption_status: string
   }
 ): Promise<ApiResult<Animal>> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -104,7 +110,7 @@ export async function updateAnimalStatus(
   id: string,
   adoption_status: string
 ): Promise<{ ok: boolean; unauthorized: boolean; error?: string }> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -129,7 +135,7 @@ export async function updateAnimalStatus(
 export async function deleteAnimal(
   id: string
 ): Promise<{ ok: boolean; unauthorized: boolean; error?: string }> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   const headers: Record<string, string> = {}
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -151,7 +157,7 @@ export async function deleteAnimal(
 
 // 내 동물 목록 조회 (홍보자용)
 export async function getMyAnimals(): Promise<{ data: Animal[]; error: string | null }> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   if (!token) {
     return { data: [], error: '로그인이 필요합니다.' }
   }
@@ -197,7 +203,7 @@ export async function getApplicationsCountByAnimalId(animalId: string): Promise<
 export async function addApplication(
   applicationData: Omit<Application, 'id' | 'status' | 'created_at'>
 ): Promise<ApiResult<Application>> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -222,7 +228,7 @@ export async function updateApplicationStatus(
   id: string,
   status: ApplicationStatus
 ): Promise<{ ok: boolean; unauthorized: boolean; error?: string }> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -245,7 +251,7 @@ export async function updateApplicationStatus(
 
 // 내 신청 내역 조회 (입양 희망자용)
 export async function getMyApplications(): Promise<{ data: Application[]; error: string | null }> {
-  const token = getAccessToken()
+  const token = await getAccessToken()
   if (!token) {
     return { data: [], error: '로그인이 필요합니다.' }
   }

@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Megaphone } from 'lucide-react'
-import { signup, checkPasswordStrength } from '@/utils/auth'
+import { signUp } from '@/lib/supabaseClient'
+import { checkPasswordStrength } from '@/utils/auth'
 import EmailInput from '@/components/auth/EmailInput'
 import PasswordInput from '@/components/auth/PasswordInput'
 
@@ -32,13 +33,13 @@ export default function SignupPromoterPage() {
 
     setLoading(true)
 
-    const result = await signup({
-      email: form.email,
-      password: form.password,
-      role: 'promoter',
-      display_name: form.display_name,
-      phone: form.phone,
-    })
+    const result = await signUp(
+      form.email,
+      form.password,
+      'promoter',
+      form.display_name,
+      form.phone
+    )
 
     setLoading(false)
 

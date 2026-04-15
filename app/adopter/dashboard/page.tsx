@@ -4,14 +4,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Heart, LogOut, Search, ClipboardList, UserCog } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { logout } from '@/utils/auth'
 
 export default function AdopterDashboardPage() {
-  const { user, loading } = useAuth({ requiredRole: 'adopter' })
+  const { user, loading, signOut } = useAuth({ requiredRole: 'adopter' })
   const router = useRouter()
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await signOut()
     router.push('/')
   }
 
